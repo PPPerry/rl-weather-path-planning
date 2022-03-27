@@ -134,7 +134,7 @@ class ApproxQAgent(Agent):
                                             max_epsilon = 1,
                                             target_episode = target_episode)
             self.state = self.env.reset()
-            # self.env.render()
+            self.env.render()
             step_in_episode = 0
             loss, mean_loss = 0.00, 0.00
             is_done = False
