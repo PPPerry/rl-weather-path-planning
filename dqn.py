@@ -5,7 +5,7 @@ import copy
 from random import random
 from gym import Env
 import gym
-from gridworld import *
+from weatherenv import *
 from core import Transition, Experience, Agent
 
 class Approximator(torch.nn.Module):
@@ -93,6 +93,12 @@ class ApproxQAgent(Agent):
                               dim_hidden = self.hidden_dim)
         self.PQ = self.Q.clone()
 
+        self.plot_steps = []
+        self.plot_rewards = []
+        self.plot_loss = []
+        self.plot_epsilon = []
+
+
     def _learn_from_memory(self, gamma, batch_size, learning_rate, epochs):
         trans_pieces = self.sample(batch_size)  # 随机获取记忆里的Transmition
         states_0 = np.vstack([x.s0 for x in trans_pieces])
@@ -141,7 +147,7 @@ class ApproxQAgent(Agent):
             while not is_done:
                 s0 = self.state
                 a0  = self.performPolicy(s0, epsilon)
-                # act方法封装了将Transition记录至Experience中的过程，还记得吗？
+                # act方法封装了将Transition记录至Experience中的过程
                 s1, r1, is_done, info, total_reward = self.act(a0)
                 # self.env.render()
                 step_in_episode += 1
@@ -154,6 +160,10 @@ class ApproxQAgent(Agent):
             mean_loss = loss / step_in_episode
             print("{0} epsilon:{1:3.2f}, loss:{2:.3f}".
                 format(self.experience.last, epsilon, mean_loss))
+            self.plot_steps.append(len(self.experience.last.trans_list))
+            self.plot_epsilon.append(epsilon)
+            self.plot_rewards.append(self.experience.last.total_reward)
+            self.plot_loss.append(mean_loss)
             # print(self.experience)
             total_steps += step_in_episode
             num_episode += 1
@@ -187,8 +197,46 @@ class ApproxQAgent(Agent):
         '''
         self.Q = self.PQ.clone()
 
+    def showFinalRoute(self):
+        total_steps = 0
+        epsilon = None
+        self.state = self.env.reset()
+        self.env.render_final()
+        step_in_episode = 0
+        loss, mean_loss = 0.00, 0.00
+        is_done = False
+        while not is_done:
+            s0 = self.state
+            a0  = self.performPolicy(s0, epsilon)
+            # act方法封装了将Transition记录至Experience中的过程
+            s1, r1, is_done, info, total_reward = self.act(a0)
+            self.env.render_final()
+            step_in_episode += 1
+        print(self.experience.last)
+        total_steps += step_in_episode
+        return
+
+    def plot(self):
+        import matplotlib.pyplot as plt
+        x = list(range(len(self.plot_steps)))
+
+        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(10, 10))
+        ax1.set_title('total steps')
+        ax2.set_title('total rewards')
+        ax3.set_title('epsilon')
+        ax4.set_title('loss')
+
+        ax1.plot(x, self.plot_steps, 'b')
+        ax2.plot(x, self.plot_rewards, 'b')
+        ax3.plot(x, self.plot_epsilon, 'r')
+        ax4.plot(x, self.plot_loss, 'r')
+
+        fig.savefig('curves.png')
+
+
+
 def testApproxQAgent():
-    env = LargeGridWorld()
+    env = WeatherWorld()
     # env = gym.make("CartPole-v1")
     
     # directory = "/Users/perry/miniforge3/envs/rl/lib/python3.8/site-packages/gym/wrappers/monitor"
@@ -202,13 +250,22 @@ def testApproxQAgent():
     agent.learning(gamma=0.99,          # 衰减引子
                    learning_rate = 1e-3,# 学习率
                    batch_size = 64,     # 集中学习的规模
-                   max_episodes=2000,   # 最大训练Episode数量
+                   max_episodes=5000,   # 最大训练Episode数量
                    min_epsilon = 0.01,   # 最小Epsilon
                    epsilon_factor = 0.3,# 开始使用最小Epsilon时Episode的序号占最大
                                         # Episodes序号之比，该比值越小，表示使用
                                         # min_epsilon的episode越多
                    epochs = 2           # 每个batch_size训练的次数
                    )
+    agent.showFinalRoute()
+    input("press any key to continue...")
+
+    agent.plot()
+
+    
+
+
+
 
 
 if __name__ == "__main__":

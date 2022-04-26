@@ -153,7 +153,6 @@ class GridWorldEnv(gym.Env):
         self.observation_space = spaces.Discrete(self.n_height * self.n_width)
         # 坐标原点为左下角，这个pyglet是一致的, left-bottom corner is the position of (0,0)
         # 通过设置起始点、终止点以及特殊奖励和类型的格子可以构建各种不同类型的格子世界环境
-        # 比如：随机行走、汽车租赁、悬崖行走等David Silver公开课中的示例
         self.ends = [(7,3)]     # 终止格子坐标，可以有多个, goal cells position list
         self.start = (0,3)      # 起始格子坐标，只有一个, start cell position, only one start position
         self.types = []         # 特殊种类的格子在此设置。[(3,2,1)]表示(3,2)处值为1.
@@ -352,6 +351,75 @@ class GridWorldEnv(gym.Env):
         # 更新个体位置 update position of an agent
         x, y = self._state_to_xy(self.state)
         self.agent_trans.set_translation((x+0.5)*u_size, (y+0.5)*u_size)        
+
+        return self.viewer.render(return_rgb_array = mode=='rgb_array')
+
+    # 显示最优路径
+    def render_final(self, mode='human', close=False):
+        if close:
+            if self.viewer is not None:
+                self.viewer.close()
+                self.viewer = None
+            return
+        zero = (0,0)
+        u_size = self.u_size
+        m = 2       # gaps between two cells
+        from gym.envs.classic_control import rendering
+        # 如果还没有设定屏幕对象，则初始化整个屏幕具备的元素。
+        if self.viewer is None:
+            self.viewer = rendering.Viewer(self.width, self.height)
+
+            # 绘制格子, draw cells
+            for x in range(self.n_width):
+                for y in range(self.n_height):
+                    v = [(x*u_size+m, y*u_size+m),
+                         ((x+1)*u_size-m, y*u_size+m),
+                         ((x+1)*u_size-m, (y+1)*u_size-m),
+                         (x*u_size+m, (y+1)*u_size-m)]
+
+                    rect = rendering.FilledPolygon(v)
+                    r = self.grids.get_reward(x,y)/10
+                    if r < 0:
+                        rect.set_color(0.9-r, 0.9 + r, 0.9 + r)
+                    elif r > 0:
+                        rect.set_color(0.3, 0.5 + r, 0.3)
+                    else:
+                        rect.set_color(0.9,0.9,0.9)
+                    self.viewer.add_geom(rect)
+                    # 绘制边框, draw frameworks
+                    v_outline = [(x*u_size+m, y*u_size+m),
+                                     ((x+1)*u_size-m, y*u_size+m),
+                                     ((x+1)*u_size-m, (y+1)*u_size-m),
+                                     (x*u_size+m, (y+1)*u_size-m)]
+                    outline = rendering.make_polygon(v_outline, False)
+                    outline.set_linewidth(5)
+                        
+                    if self._is_end_state(x,y):
+                        # 给终点方格添加金黄色边框, give end state cell a yellow outline.
+                        outline.set_color(0.9,0.9,0)
+                        self.viewer.add_geom(outline)
+                    if self.start[0] == x and self.start[1] == y:
+                        outline.set_color(0.5, 0.5, 0.8)
+                        self.viewer.add_geom(outline)
+                    if self.grids.get_type(x,y) == 1: # 障碍格子用深灰色表示, obstacle cells are with gray color
+                        rect.set_color(0.3,0.3,0.3)
+                    else:
+                        pass
+            # 绘制个体, draw agent
+            # self.agent = rendering.make_circle(u_size/4, 30, True)
+            # self.agent.set_color(1.0, 1.0, 0.0)
+            # self.viewer.add_geom(self.agent)
+            # self.agent_trans = rendering.Transform()
+            # self.agent.add_attr(self.agent_trans)
+
+        # 添加个体位置
+        x, y = self._state_to_xy(self.state)
+        agent = rendering.make_circle(u_size/4, 30, True)
+        agent.set_color(1.0, 1.0, 0.0)
+        agent_trans= rendering.Transform(translation=((x+0.5)*u_size, (y+0.5)*u_size))
+        agent.add_attr(agent_trans)
+        # self.agent_trans.set_translation((x+0.5)*u_size, (y+0.5)*u_size)
+        self.viewer.add_geom(agent)     
 
         return self.viewer.render(return_rgb_array = mode=='rgb_array')
 
