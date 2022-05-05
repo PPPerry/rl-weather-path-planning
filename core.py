@@ -48,7 +48,7 @@ class Episode(object):
     def __init__(self, e_id:int = 0) -> None:
         self.total_reward = 0   # 总的获得的奖励
         self.trans_list = []    # 状态转移列表
-        self.name = str(e_id)     # 可以给Episode起个名字："成功闯关,黯然失败？"
+        self.name = str(e_id)
 
     def push(self, trans:Transition) -> float:
         self.trans_list.append(trans)

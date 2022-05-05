@@ -5,7 +5,7 @@ import copy
 from random import random
 from gym import Env
 import gym
-from weatherenv import *
+from weatherenv2 import *
 from core import Transition, Experience, Agent
 
 class Approximator(torch.nn.Module):
@@ -250,7 +250,7 @@ def testApproxQAgent():
     agent.learning(gamma=0.99,          # 衰减引子
                    learning_rate = 1e-3,# 学习率
                    batch_size = 64,     # 集中学习的规模
-                   max_episodes=5000,   # 最大训练Episode数量
+                   max_episodes=2000,   # 最大训练Episode数量
                    min_epsilon = 0.01,   # 最小Epsilon
                    epsilon_factor = 0.3,# 开始使用最小Epsilon时Episode的序号占最大
                                         # Episodes序号之比，该比值越小，表示使用
